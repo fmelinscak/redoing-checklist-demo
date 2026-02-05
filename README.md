@@ -20,11 +20,12 @@ A simple, static, single-page, frontend-only application for managing DOI resear
 ## Usage
 
 1. Open `index.html` in a web browser
-2. Enter a DOI (e.g., `10.1371/journal.pone.0000000`)
-3. The title will be automatically fetched from Crossref
-4. Fill in the assessment matrix by selecting radio buttons
-5. Download your data using the JSON or PDF buttons
-6. Data is automatically saved and will persist across browser sessions
+2. **(Optional)** Edit the `mailto` parameter in the Crossref API call (line ~189) with your contact email for better API support
+3. Enter a DOI (e.g., `10.1371/journal.pone.0000000`)
+4. The title will be automatically fetched from Crossref
+5. Fill in the assessment matrix by selecting radio buttons
+6. Download your data using the JSON or PDF buttons
+7. Data is automatically saved and will persist across browser sessions
 
 ## Local Development
 

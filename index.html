@@ -185,6 +185,7 @@
                         this.isFetchingTitle = true;
 
                         // Fetch from Crossref API
+                        // Note: Replace contact@example.com with your actual contact email
                         const cleanDoi = this.doi.trim();
                         fetch(`https://api.crossref.org/works/${encodeURIComponent(cleanDoi)}?mailto=contact@example.com`)
                             .then(response => {
