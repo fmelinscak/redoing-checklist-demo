@@ -40,6 +40,17 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        .visually-hidden {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border-width: 0;
+        }
     </style>
 </head>
 <body>
@@ -58,11 +69,11 @@
                     @input="fetchTitle"
                     placeholder="Enter DOI (e.g., 10.1000/xyz123)"
                 >
-                <span v-if="loading" class="input-group-text">
-                    <div class="loading-spinner"></div>
+                <span v-if="loading" class="input-group-text" aria-live="polite">
+                    <div class="loading-spinner" role="status" aria-label="Loading title from Crossref"></div>
                 </span>
             </div>
-            <div v-if="error" class="text-danger small mt-1">{{ error }}</div>
+            <div v-if="error" class="text-danger small mt-1" role="alert">{{ error }}</div>
         </div>
 
         <!-- Title Input -->
@@ -82,10 +93,11 @@
             <h4 class="mb-3">Assessment Matrix</h4>
             <div class="matrix-container">
                 <table class="radio-matrix">
+                    <caption class="visually-hidden">Assessment matrix for rating each row against columns</caption>
                     <thead>
                         <tr>
-                            <th></th>
-                            <th v-for="col in columns" :key="col">{{ col }}</th>
+                            <th scope="col"></th>
+                            <th v-for="col in columns" :key="col" scope="col">{{ col }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -98,6 +110,7 @@
                                     :value="col"
                                     v-model="matrixData[row]"
                                     @change="saveData"
+                                    :aria-label="row + ' - ' + col"
                                 >
                             </td>
                         </tr>
@@ -109,14 +122,14 @@
         <!-- Download Buttons -->
         <div class="d-flex gap-2">
             <button @click="downloadJSON" class="btn btn-primary">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-download" viewBox="0 0 16 16">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-download" viewBox="0 0 16 16" aria-hidden="true">
                     <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
                     <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
                 </svg>
                 Download JSON
             </button>
             <button @click="downloadPDF" class="btn btn-secondary">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-pdf" viewBox="0 0 16 16">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-pdf" viewBox="0 0 16 16" aria-hidden="true">
                     <path d="M4 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H4zm0 1h8a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1z"/>
                     <path d="M4.603 12.087a.81.81 0 0 1-.438-.42c-.195-.388-.13-.776.08-1.102.198-.307.526-.568.897-.787a7.68 7.68 0 0 1 1.482-.645 19.701 19.701 0 0 0 1.062-2.227 7.269 7.269 0 0 1-.43-1.295c-.086-.4-.119-.796-.046-1.136.075-.354.274-.672.65-.823.192-.077.4-.12.602-.077a.7.7 0 0 1 .477.365c.088.164.12.356.127.538.007.187-.012.395-.047.614-.084.51-.27 1.134-.52 1.794a10.954 10.954 0 0 0 .98 1.686 5.753 5.753 0 0 1 1.334.05c.364.065.734.195.96.465.12.144.193.32.2.518.007.192-.047.382-.138.563a1.04 1.04 0 0 1-.354.416.856.856 0 0 1-.51.138c-.331-.014-.654-.196-.933-.417a5.716 5.716 0 0 1-.911-.95 11.642 11.642 0 0 0-1.997.406 11.311 11.311 0 0 1-1.021 1.51c-.29.35-.608.655-.926.787a.793.793 0 0 1-.58.029zm1.379-1.901c-.166.076-.32.156-.459.238-.328.194-.541.383-.647.547-.094.145-.096.25-.04.361.01.022.02.036.026.044a.27.27 0 0 0 .035-.012c.137-.056.355-.235.635-.572a8.18 8.18 0 0 0 .45-.606zm1.64-1.33a12.647 12.647 0 0 1 1.01-.193 11.666 11.666 0 0 1-.51-.858 20.741 20.741 0 0 1-.5 1.05zm2.446.45c.15.162.296.3.435.41.24.19.407.253.498.256a.107.107 0 0 0 .07-.015.307.307 0 0 0 .094-.125.436.436 0 0 0 .059-.2.095.095 0 0 0-.026-.063c-.052-.062-.2-.152-.518-.209a3.881 3.881 0 0 0-.612-.053zM8.078 5.8a6.7 6.7 0 0 0 .2-.828c.031-.188.043-.343.038-.465a.613.613 0 0 0-.032-.198.517.517 0 0 0-.145.04c-.087.035-.158.106-.196.283-.04.192-.03.469.046.822.024.111.054.227.09.346z"/>
                 </svg>
@@ -143,7 +156,8 @@
                     rows: ['Row 1', 'Row 2', 'Row 3', 'Row 4', 'Row 5'],
                     columns: ['Column A', 'Column B', 'Column C', 'Column D'],
                     matrixData: {},
-                    debounceTimer: null
+                    debounceTimer: null,
+                    isFetchingTitle: false
                 };
             },
             mounted() {
@@ -160,15 +174,19 @@
                     this.debounceTimer = setTimeout(() => {
                         if (!this.doi.trim()) {
                             this.error = '';
+                            this.loading = false;
+                            this.isFetchingTitle = false;
+                            this.saveData();
                             return;
                         }
 
                         this.loading = true;
                         this.error = '';
+                        this.isFetchingTitle = true;
 
                         // Fetch from Crossref API
                         const cleanDoi = this.doi.trim();
-                        fetch(`https://api.crossref.org/works/${encodeURIComponent(cleanDoi)}`)
+                        fetch(`https://api.crossref.org/works/${encodeURIComponent(cleanDoi)}?mailto=contact@example.com`)
                             .then(response => {
                                 if (!response.ok) {
                                     throw new Error('DOI not found');
@@ -183,6 +201,7 @@
                                     throw new Error('Title not found in response');
                                 }
                                 this.loading = false;
+                                this.isFetchingTitle = false;
                             })
                             .catch(error => {
                                 if (error.message === 'DOI not found') {
@@ -193,6 +212,8 @@
                                     this.error = 'Unable to fetch title. Please check your connection and DOI.';
                                 }
                                 this.loading = false;
+                                this.isFetchingTitle = false;
+                                this.saveData();
                             });
                     }, 500); // 500ms debounce
                 },
@@ -202,7 +223,11 @@
                         title: this.title,
                         matrixData: this.matrixData
                     };
-                    localStorage.setItem('doiMatrixData', JSON.stringify(data));
+                    try {
+                        localStorage.setItem('doiMatrixData', JSON.stringify(data));
+                    } catch (e) {
+                        console.error('Error saving data to localStorage:', e);
+                    }
                 },
                 loadData() {
                     const saved = localStorage.getItem('doiMatrixData');
@@ -239,41 +264,61 @@
                     const { jsPDF } = window.jspdf;
                     const doc = new jsPDF();
                     
-                    let yPos = 20;
+                    const pageHeight = doc.internal.pageSize.getHeight();
+                    const marginTop = 20;
+                    const marginBottom = 20;
+                    let yPos = marginTop;
+
+                    const ensureSpace = (requiredHeight) => {
+                        if (yPos + requiredHeight > pageHeight - marginBottom) {
+                            doc.addPage();
+                            yPos = marginTop;
+                        }
+                    };
                     
                     // Title
+                    ensureSpace(15);
                     doc.setFontSize(16);
                     doc.text('DOI Research Matrix', 20, yPos);
                     yPos += 15;
                     
                     // DOI
+                    ensureSpace(10);
                     doc.setFontSize(12);
                     doc.text('DOI:', 20, yPos);
                     doc.setFontSize(10);
-                    doc.text(this.doi || 'N/A', 35, yPos);
+                    const doiText = String(this.doi || 'N/A').substring(0, 500);
+                    doc.text(doiText, 35, yPos);
                     yPos += 10;
                     
                     // Title
+                    ensureSpace(7);
                     doc.setFontSize(12);
                     doc.text('Title:', 20, yPos);
                     doc.setFontSize(10);
-                    const titleLines = doc.splitTextToSize(this.title || 'N/A', 150);
+                    const titleText = String(this.title || 'N/A').substring(0, 1000);
+                    const titleLines = doc.splitTextToSize(titleText, 150);
+                    const titleHeight = titleLines.length * 7;
+                    ensureSpace(titleHeight + 10);
                     doc.text(titleLines, 35, yPos);
-                    yPos += (titleLines.length * 7) + 10;
+                    yPos += titleHeight + 10;
                     
                     // Matrix
+                    ensureSpace(10);
                     doc.setFontSize(12);
                     doc.text('Assessment Matrix:', 20, yPos);
                     yPos += 10;
                     
                     doc.setFontSize(10);
                     this.rows.forEach(row => {
-                        const value = this.matrixData[row] || 'Not selected';
+                        const value = String(this.matrixData[row] || 'Not selected').substring(0, 100);
+                        ensureSpace(7);
                         doc.text(`${row}: ${value}`, 25, yPos);
                         yPos += 7;
                     });
                     
                     // Export date
+                    ensureSpace(10);
                     yPos += 10;
                     doc.setFontSize(8);
                     doc.text(`Exported: ${new Date().toLocaleString()}`, 20, yPos);
@@ -283,7 +328,10 @@
             },
             watch: {
                 doi() {
-                    this.saveData();
+                    // Only save if not currently fetching (to avoid duplicate saves)
+                    if (!this.isFetchingTitle) {
+                        this.saveData();
+                    }
                 },
                 title() {
                     this.saveData();
