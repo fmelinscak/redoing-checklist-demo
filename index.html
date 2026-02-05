@@ -168,7 +168,7 @@
 
                         // Fetch from Crossref API
                         const cleanDoi = this.doi.trim();
-                        fetch(`https://api.crossref.org/works/${cleanDoi}`)
+                        fetch(`https://api.crossref.org/works/${encodeURIComponent(cleanDoi)}`)
                             .then(response => {
                                 if (!response.ok) {
                                     throw new Error('DOI not found');
@@ -185,7 +185,13 @@
                                 this.loading = false;
                             })
                             .catch(error => {
-                                this.error = 'Could not fetch title. Please check the DOI.';
+                                if (error.message === 'DOI not found') {
+                                    this.error = 'DOI not found. Please check the DOI and try again.';
+                                } else if (error.message === 'Title not found in response') {
+                                    this.error = 'Title not available for this DOI.';
+                                } else {
+                                    this.error = 'Unable to fetch title. Please check your connection and DOI.';
+                                }
                                 this.loading = false;
                             });
                     }, 500); // 500ms debounce
