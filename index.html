@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DOI Research Matrix</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .matrix-container {
+            overflow-x: auto;
+        }
+        .radio-matrix {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .radio-matrix th,
+        .radio-matrix td {
+            border: 1px solid #dee2e6;
+            padding: 0.5rem;
+            text-align: center;
+        }
+        .radio-matrix th {
+            background-color: #f8f9fa;
+        }
+        .radio-matrix td:first-child {
+            background-color: #f8f9fa;
+            font-weight: 500;
+        }
+        .loading-spinner {
+            display: inline-block;
+            width: 1rem;
+            height: 1rem;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div id="app" class="container py-5">
+        <h1 class="mb-4">DOI Research Matrix</h1>
+        
+        <!-- DOI Input -->
+        <div class="mb-3">
+            <label for="doiInput" class="form-label">DOI</label>
+            <div class="input-group">
+                <input 
+                    type="text" 
+                    class="form-control" 
+                    id="doiInput" 
+                    v-model="doi"
+                    @input="fetchTitle"
+                    placeholder="Enter DOI (e.g., 10.1000/xyz123)"
+                >
+                <span v-if="loading" class="input-group-text">
+                    <div class="loading-spinner"></div>
+                </span>
+            </div>
+            <div v-if="error" class="text-danger small mt-1">{{ error }}</div>
+        </div>
+
+        <!-- Title Input -->
+        <div class="mb-4">
+            <label for="titleInput" class="form-label">Title</label>
+            <input 
+                type="text" 
+                class="form-control" 
+                id="titleInput" 
+                v-model="title"
+                placeholder="Article title (auto-filled from DOI)"
+            >
+        </div>
+
+        <!-- Radio Button Matrix -->
+        <div class="mb-4">
+            <h4 class="mb-3">Assessment Matrix</h4>
+            <div class="matrix-container">
+                <table class="radio-matrix">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th v-for="col in columns" :key="col">{{ col }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="row in rows" :key="row">
+                            <td>{{ row }}</td>
+                            <td v-for="col in columns" :key="col">
+                                <input 
+                                    type="radio" 
+                                    :name="'row-' + row" 
+                                    :value="col"
+                                    v-model="matrixData[row]"
+                                    @change="saveData"
+                                >
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Download Buttons -->
+        <div class="d-flex gap-2">
+            <button @click="downloadJSON" class="btn btn-primary">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-download" viewBox="0 0 16 16">
+                    <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                    <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+                </svg>
+                Download JSON
+            </button>
+            <button @click="downloadPDF" class="btn btn-secondary">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-pdf" viewBox="0 0 16 16">
+                    <path d="M4 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H4zm0 1h8a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1z"/>
+                    <path d="M4.603 12.087a.81.81 0 0 1-.438-.42c-.195-.388-.13-.776.08-1.102.198-.307.526-.568.897-.787a7.68 7.68 0 0 1 1.482-.645 19.701 19.701 0 0 0 1.062-2.227 7.269 7.269 0 0 1-.43-1.295c-.086-.4-.119-.796-.046-1.136.075-.354.274-.672.65-.823.192-.077.4-.12.602-.077a.7.7 0 0 1 .477.365c.088.164.12.356.127.538.007.187-.012.395-.047.614-.084.51-.27 1.134-.52 1.794a10.954 10.954 0 0 0 .98 1.686 5.753 5.753 0 0 1 1.334.05c.364.065.734.195.96.465.12.144.193.32.2.518.007.192-.047.382-.138.563a1.04 1.04 0 0 1-.354.416.856.856 0 0 1-.51.138c-.331-.014-.654-.196-.933-.417a5.716 5.716 0 0 1-.911-.95 11.642 11.642 0 0 0-1.997.406 11.311 11.311 0 0 1-1.021 1.51c-.29.35-.608.655-.926.787a.793.793 0 0 1-.58.029zm1.379-1.901c-.166.076-.32.156-.459.238-.328.194-.541.383-.647.547-.094.145-.096.25-.04.361.01.022.02.036.026.044a.27.27 0 0 0 .035-.012c.137-.056.355-.235.635-.572a8.18 8.18 0 0 0 .45-.606zm1.64-1.33a12.647 12.647 0 0 1 1.01-.193 11.666 11.666 0 0 1-.51-.858 20.741 20.741 0 0 1-.5 1.05zm2.446.45c.15.162.296.3.435.41.24.19.407.253.498.256a.107.107 0 0 0 .07-.015.307.307 0 0 0 .094-.125.436.436 0 0 0 .059-.2.095.095 0 0 0-.026-.063c-.052-.062-.2-.152-.518-.209a3.881 3.881 0 0 0-.612-.053zM8.078 5.8a6.7 6.7 0 0 0 .2-.828c.031-.188.043-.343.038-.465a.613.613 0 0 0-.032-.198.517.517 0 0 0-.145.04c-.087.035-.158.106-.196.283-.04.192-.03.469.046.822.024.111.054.227.09.346z"/>
+                </svg>
+                Download PDF
+            </button>
+        </div>
+    </div>
+
+    <!-- Vue.js 3 from CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@3.3.4/dist/vue.global.js"></script>
+    <!-- jsPDF for PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    doi: '',
+                    title: '',
+                    loading: false,
+                    error: '',
+                    rows: ['Row 1', 'Row 2', 'Row 3', 'Row 4', 'Row 5'],
+                    columns: ['Column A', 'Column B', 'Column C', 'Column D'],
+                    matrixData: {},
+                    debounceTimer: null
+                };
+            },
+            mounted() {
+                this.loadData();
+            },
+            methods: {
+                fetchTitle() {
+                    // Clear existing timer
+                    if (this.debounceTimer) {
+                        clearTimeout(this.debounceTimer);
+                    }
+                    
+                    // Set new timer
+                    this.debounceTimer = setTimeout(() => {
+                        if (!this.doi.trim()) {
+                            this.error = '';
+                            return;
+                        }
+
+                        this.loading = true;
+                        this.error = '';
+
+                        // Fetch from Crossref API
+                        const cleanDoi = this.doi.trim();
+                        fetch(`https://api.crossref.org/works/${cleanDoi}`)
+                            .then(response => {
+                                if (!response.ok) {
+                                    throw new Error('DOI not found');
+                                }
+                                return response.json();
+                            })
+                            .then(data => {
+                                if (data.message && data.message.title && data.message.title.length > 0) {
+                                    this.title = data.message.title[0];
+                                    this.saveData();
+                                } else {
+                                    throw new Error('Title not found in response');
+                                }
+                                this.loading = false;
+                            })
+                            .catch(error => {
+                                this.error = 'Could not fetch title. Please check the DOI.';
+                                this.loading = false;
+                            });
+                    }, 500); // 500ms debounce
+                },
+                saveData() {
+                    const data = {
+                        doi: this.doi,
+                        title: this.title,
+                        matrixData: this.matrixData
+                    };
+                    localStorage.setItem('doiMatrixData', JSON.stringify(data));
+                },
+                loadData() {
+                    const saved = localStorage.getItem('doiMatrixData');
+                    if (saved) {
+                        try {
+                            const data = JSON.parse(saved);
+                            this.doi = data.doi || '';
+                            this.title = data.title || '';
+                            this.matrixData = data.matrixData || {};
+                        } catch (e) {
+                            console.error('Error loading saved data:', e);
+                        }
+                    }
+                },
+                downloadJSON() {
+                    const data = {
+                        doi: this.doi,
+                        title: this.title,
+                        matrixData: this.matrixData,
+                        exportedAt: new Date().toISOString()
+                    };
+                    
+                    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `doi-matrix-${Date.now()}.json`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                },
+                downloadPDF() {
+                    const { jsPDF } = window.jspdf;
+                    const doc = new jsPDF();
+                    
+                    let yPos = 20;
+                    
+                    // Title
+                    doc.setFontSize(16);
+                    doc.text('DOI Research Matrix', 20, yPos);
+                    yPos += 15;
+                    
+                    // DOI
+                    doc.setFontSize(12);
+                    doc.text('DOI:', 20, yPos);
+                    doc.setFontSize(10);
+                    doc.text(this.doi || 'N/A', 35, yPos);
+                    yPos += 10;
+                    
+                    // Title
+                    doc.setFontSize(12);
+                    doc.text('Title:', 20, yPos);
+                    doc.setFontSize(10);
+                    const titleLines = doc.splitTextToSize(this.title || 'N/A', 150);
+                    doc.text(titleLines, 35, yPos);
+                    yPos += (titleLines.length * 7) + 10;
+                    
+                    // Matrix
+                    doc.setFontSize(12);
+                    doc.text('Assessment Matrix:', 20, yPos);
+                    yPos += 10;
+                    
+                    doc.setFontSize(10);
+                    this.rows.forEach(row => {
+                        const value = this.matrixData[row] || 'Not selected';
+                        doc.text(`${row}: ${value}`, 25, yPos);
+                        yPos += 7;
+                    });
+                    
+                    // Export date
+                    yPos += 10;
+                    doc.setFontSize(8);
+                    doc.text(`Exported: ${new Date().toLocaleString()}`, 20, yPos);
+                    
+                    doc.save(`doi-matrix-${Date.now()}.pdf`);
+                }
+            },
+            watch: {
+                doi() {
+                    this.saveData();
+                },
+                title() {
+                    this.saveData();
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
