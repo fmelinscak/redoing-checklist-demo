@@ -366,11 +366,6 @@
                         this.uploadError = 'Could not read the selected file. Please try again.';
                         event.target.value = '';
                     };
-                    reader.onerror = () => {
-                        this.uploadSuccess = false;
-                        this.uploadError = 'Could not read the selected file. Please try again.';
-                        event.target.value = '';
-                    };
                     reader.readAsText(file);
                 },
                 downloadPDF() {
