@@ -292,7 +292,8 @@
                     const file = event.target.files[0];
                     if (!file) return;
 
-                    if (file.type !== 'application/json' && !file.name.endsWith('.json')) {
+                    const fileName = file.name.toLowerCase();
+                    if (file.type !== 'application/json' && !fileName.endsWith('.json')) {
                         this.uploadError = 'Invalid file type. Please upload a .json file.';
                         return;
                     }
@@ -322,9 +323,22 @@
                         if (
                             typeof data !== 'object' ||
                             data === null ||
-                            Array.isArray(data) ||
-                            (!('doi' in data) && !('title' in data) && !('matrixData' in data))
+                            Array.isArray(data)
                         ) {
+                            this.uploadError = 'Unrecognized file format. The JSON does not contain expected fields.';
+                            return;
+                        }
+
+                        const hasValidDoi = typeof data.doi === 'string' && data.doi.trim() !== '';
+                        const hasValidTitle = typeof data.title === 'string' && data.title.trim() !== '';
+                        const hasValidMatrix = (
+                            data.matrixData &&
+                            typeof data.matrixData === 'object' &&
+                            !Array.isArray(data.matrixData) &&
+                            this.rows.some(row => row in data.matrixData && this.columns.includes(data.matrixData[row]))
+                        );
+
+                        if (!hasValidDoi && !hasValidTitle && !hasValidMatrix) {
                             this.uploadError = 'Unrecognized file format. The JSON does not contain expected fields.';
                             return;
                         }
@@ -343,8 +357,14 @@
                         this.matrixData = filteredMatrix;
 
                         this.saveData();
+                        if (this._uploadSuccessTimer) clearTimeout(this._uploadSuccessTimer);
                         this.uploadSuccess = true;
-                        setTimeout(() => { this.uploadSuccess = false; }, 3000);
+                        this._uploadSuccessTimer = setTimeout(() => { this.uploadSuccess = false; }, 3000);
+                    };
+                    reader.onerror = () => {
+                        this.uploadSuccess = false;
+                        this.uploadError = 'Could not read the selected file. Please try again.';
+                        event.target.value = '';
                     };
                     reader.readAsText(file);
                 },
