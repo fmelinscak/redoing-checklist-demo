@@ -159,6 +159,7 @@
         </div>
         <div v-if="uploadError" class="text-danger small mt-2" role="alert" aria-live="polite">{{ uploadError }}</div>
         <div v-if="uploadSuccess" class="text-success small mt-2" role="status" aria-live="polite">Data loaded successfully.</div>
+        <div v-if="emailError" class="text-danger small mt-2" role="alert" aria-live="polite">{{ emailError }}</div>
     </div>
 
     <!-- Vue.js 3 from CDN -->
@@ -182,7 +183,8 @@
                     debounceTimer: null,
                     isFetchingTitle: false,
                     uploadError: '',
-                    uploadSuccess: false
+                    uploadSuccess: false,
+                    emailError: ''
                 };
             },
             mounted() {
@@ -376,6 +378,8 @@
                 },
                 prepareEmail() {
                     const RECIPIENT = 'recipient@example.com';
+                    // Most browsers/email clients silently truncate or drop mailto: URLs beyond ~2000 chars
+                    const MAILTO_URL_LIMIT = 2000;
 
                     // Build subject: prefer title, fall back to DOI, then generic
                     const subjectBase = this.title.trim() || this.doi.trim() || '';
@@ -385,18 +389,18 @@
                     // Truncate subject to ~200 chars to stay within email client limits
                     const subject = subjectFull.substring(0, 200);
 
-                    // Build body
-                    // Note: mailto: body is plain text; total URL length should stay under ~2000 chars,
-                    // which is comfortably achievable with the current 5-row form.
+                    // Truncate body fields to keep total URL length within safe limits
+                    const doiTruncated = this.doi.trim().substring(0, 100);
+                    const titleTruncated = this.title.trim().substring(0, 150);
                     const matrixLines = this.rows
-                        .map(row => `  ${row}: ${this.matrixData[row] || 'Not selected'}`)
+                        .map(row => `  ${row}: ${(this.matrixData[row] || 'Not selected').substring(0, 50)}`)
                         .join('\n');
 
                     const body = [
                         'DOI Research Matrix Assessment',
                         '',
-                        `DOI: ${this.doi.trim() || 'N/A'}`,
-                        `Title: ${this.title.trim() || 'N/A'}`,
+                        `DOI: ${doiTruncated || 'N/A'}`,
+                        `Title: ${titleTruncated || 'N/A'}`,
                         '',
                         'Assessment Matrix:',
                         matrixLines,
@@ -409,6 +413,12 @@
                         `?subject=${encodeURIComponent(subject)}` +
                         `&body=${encodeURIComponent(body)}`;
 
+                    if (mailtoUrl.length > MAILTO_URL_LIMIT) {
+                        this.emailError = 'The email content is too long to open in your email client. Please shorten the DOI or title and try again.';
+                        return;
+                    }
+
+                    this.emailError = '';
                     const a = document.createElement('a');
                     a.href = mailtoUrl;
                     document.body.appendChild(a);
