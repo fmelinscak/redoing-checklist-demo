@@ -409,7 +409,11 @@
                         `?subject=${encodeURIComponent(subject)}` +
                         `&body=${encodeURIComponent(body)}`;
 
-                    window.location.href = mailtoUrl;
+                    const a = document.createElement('a');
+                    a.href = mailtoUrl;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
                 },
                 downloadPDF() {
                     const { jsPDF } = window.jspdf;
