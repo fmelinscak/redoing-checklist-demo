@@ -119,8 +119,16 @@
             </div>
         </div>
 
-        <!-- Download Buttons -->
-        <div class="d-flex gap-2">
+        <!-- Download / Upload Buttons -->
+        <input
+            type="file"
+            id="jsonUploadInput"
+            accept=".json"
+            class="visually-hidden"
+            aria-label="Upload JSON file"
+            @change="handleUpload"
+        >
+        <div class="d-flex gap-2 flex-wrap">
             <button @click="downloadJSON" class="btn btn-primary">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-download" viewBox="0 0 16 16" aria-hidden="true">
                     <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
@@ -135,7 +143,16 @@
                 </svg>
                 Download PDF
             </button>
+            <button @click="triggerUpload" class="btn btn-outline-secondary">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-upload" viewBox="0 0 16 16" aria-hidden="true">
+                    <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                    <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
+                </svg>
+                Upload JSON
+            </button>
         </div>
+        <div v-if="uploadError" class="text-danger small mt-2" role="alert" aria-live="polite">{{ uploadError }}</div>
+        <div v-if="uploadSuccess" class="text-success small mt-2" role="status" aria-live="polite">Data loaded successfully.</div>
     </div>
 
     <!-- Vue.js 3 from CDN -->
@@ -157,7 +174,9 @@
                     columns: ['Column A', 'Column B', 'Column C', 'Column D'],
                     matrixData: {},
                     debounceTimer: null,
-                    isFetchingTitle: false
+                    isFetchingTitle: false,
+                    uploadError: '',
+                    uploadSuccess: false
                 };
             },
             mounted() {
@@ -260,6 +279,74 @@
                     a.click();
                     document.body.removeChild(a);
                     URL.revokeObjectURL(url);
+                },
+                triggerUpload() {
+                    const input = document.getElementById('jsonUploadInput');
+                    input.value = '';
+                    input.click();
+                },
+                handleUpload(event) {
+                    this.uploadError = '';
+                    this.uploadSuccess = false;
+
+                    const file = event.target.files[0];
+                    if (!file) return;
+
+                    if (file.type !== 'application/json' && !file.name.endsWith('.json')) {
+                        this.uploadError = 'Invalid file type. Please upload a .json file.';
+                        return;
+                    }
+
+                    const hasExistingData =
+                        this.doi.trim() ||
+                        this.title.trim() ||
+                        Object.keys(this.matrixData).some(k => this.matrixData[k]);
+
+                    if (hasExistingData) {
+                        if (!window.confirm('This will replace your current data. Continue?')) {
+                            event.target.value = '';
+                            return;
+                        }
+                    }
+
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        let data;
+                        try {
+                            data = JSON.parse(e.target.result);
+                        } catch (err) {
+                            this.uploadError = 'Invalid JSON file. Could not parse the file.';
+                            return;
+                        }
+
+                        if (
+                            typeof data !== 'object' ||
+                            data === null ||
+                            Array.isArray(data) ||
+                            (!('doi' in data) && !('title' in data) && !('matrixData' in data))
+                        ) {
+                            this.uploadError = 'Unrecognized file format. The JSON does not contain expected fields.';
+                            return;
+                        }
+
+                        this.doi = typeof data.doi === 'string' ? data.doi : '';
+                        this.title = typeof data.title === 'string' ? data.title : '';
+
+                        const filteredMatrix = {};
+                        if (data.matrixData && typeof data.matrixData === 'object' && !Array.isArray(data.matrixData)) {
+                            for (const row of this.rows) {
+                                if (row in data.matrixData && this.columns.includes(data.matrixData[row])) {
+                                    filteredMatrix[row] = data.matrixData[row];
+                                }
+                            }
+                        }
+                        this.matrixData = filteredMatrix;
+
+                        this.saveData();
+                        this.uploadSuccess = true;
+                        setTimeout(() => { this.uploadSuccess = false; }, 3000);
+                    };
+                    reader.readAsText(file);
                 },
                 downloadPDF() {
                     const { jsPDF } = window.jspdf;
