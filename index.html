@@ -150,9 +150,16 @@
                 </svg>
                 Upload JSON
             </button>
+            <button @click="prepareEmail" class="btn btn-outline-primary" aria-label="Prepare email with form data">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-envelope" viewBox="0 0 16 16" aria-hidden="true">
+                    <path d="M0 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V4zm2-1a1 1 0 0 0-1 1v.217l7 4.2 7-4.2V4a1 1 0 0 0-1-1H2zm13 2.383-4.708 2.825L15 11.105V5.383zm-.034 6.876-5.64-3.471L8 9.583l-1.326-.795-5.64 3.47A1 1 0 0 0 2 13h12a1 1 0 0 0 .966-.741zM1 11.105l4.708-2.897L1 5.383v5.722z"/>
+                </svg>
+                Prepare Email
+            </button>
         </div>
         <div v-if="uploadError" class="text-danger small mt-2" role="alert" aria-live="polite">{{ uploadError }}</div>
         <div v-if="uploadSuccess" class="text-success small mt-2" role="status" aria-live="polite">Data loaded successfully.</div>
+        <div v-if="emailError" class="text-danger small mt-2" role="alert" aria-live="polite">{{ emailError }}</div>
     </div>
 
     <!-- Vue.js 3 from CDN -->
@@ -176,7 +183,8 @@
                     debounceTimer: null,
                     isFetchingTitle: false,
                     uploadError: '',
-                    uploadSuccess: false
+                    uploadSuccess: false,
+                    emailError: ''
                 };
             },
             mounted() {
@@ -367,6 +375,55 @@
                         event.target.value = '';
                     };
                     reader.readAsText(file);
+                },
+                prepareEmail() {
+                    const RECIPIENT = 'recipient@example.com';
+                    // Most browsers/email clients silently truncate or drop mailto: URLs beyond ~2000 chars
+                    const MAILTO_URL_LIMIT = 2000;
+
+                    // Build subject: prefer title, fall back to DOI, then generic
+                    const subjectBase = this.title.trim() || this.doi.trim() || '';
+                    const subjectFull = subjectBase
+                        ? `DOI Research Matrix: ${subjectBase}`
+                        : 'DOI Research Matrix';
+                    // Truncate subject to ~200 chars to stay within email client limits
+                    const subject = subjectFull.substring(0, 200);
+
+                    // Truncate body fields to keep total URL length within safe limits
+                    const doiTruncated = this.doi.trim().substring(0, 100);
+                    const titleTruncated = this.title.trim().substring(0, 150);
+                    const matrixLines = this.rows
+                        .map(row => `  ${row}: ${(this.matrixData[row] || 'Not selected').substring(0, 50)}`)
+                        .join('\n');
+
+                    const body = [
+                        'DOI Research Matrix Assessment',
+                        '',
+                        `DOI: ${doiTruncated || 'N/A'}`,
+                        `Title: ${titleTruncated || 'N/A'}`,
+                        '',
+                        'Assessment Matrix:',
+                        matrixLines,
+                        '',
+                        `Exported: ${new Date().toLocaleString()}`
+                    ].join('\n');
+
+                    const mailtoUrl =
+                        `mailto:${RECIPIENT}` +
+                        `?subject=${encodeURIComponent(subject)}` +
+                        `&body=${encodeURIComponent(body)}`;
+
+                    if (mailtoUrl.length > MAILTO_URL_LIMIT) {
+                        this.emailError = 'The email content is too long to open in your email client. Please shorten the DOI or title and try again.';
+                        return;
+                    }
+
+                    this.emailError = '';
+                    const a = document.createElement('a');
+                    a.href = mailtoUrl;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
                 },
                 downloadPDF() {
                     const { jsPDF } = window.jspdf;
